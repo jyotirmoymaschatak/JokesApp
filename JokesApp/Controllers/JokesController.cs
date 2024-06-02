@@ -8,16 +8,19 @@ using Microsoft.EntityFrameworkCore;
 using JokesApp.Data;
 using JokesApp.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 namespace JokesApp.Controllers
 {
     public class JokesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public JokesController(ApplicationDbContext context)
+        public JokesController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: Jokes
@@ -58,9 +61,14 @@ namespace JokesApp.Controllers
 
         // GET: Jokes/Create
         [Authorize]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View();
+            var user = await _userManager.GetUserAsync(User);
+            var joke = new Joke
+            {
+                CreatedBy = user.Email
+            };
+            return View(joke);
         }
 
         // POST: Jokes/Create
@@ -102,6 +110,7 @@ namespace JokesApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,JokeQuestion,JokeAnswer,CreatedBy")] Joke joke)
         {
+            var user = await _userManager.GetUserAsync(User);
             if (id != joke.Id)
             {
                 return NotFound();
@@ -111,6 +120,7 @@ namespace JokesApp.Controllers
             {
                 try
                 {
+                    joke.CreatedBy = user.Email;
                     _context.Update(joke);
                     await _context.SaveChangesAsync();
                 }
